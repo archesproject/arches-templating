@@ -34,6 +34,8 @@ class TemplateEngine(object):
                 tag_type = TemplateTagType.IMAGE
             elif tag_match[1] == "context":
                 tag_type = TemplateTagType.CONTEXT
+            elif tag_match[1] == "if":
+                tag_type = TemplateTagType.IF
             elif tag_match[1] == "end":
                 tag_type = TemplateTagType.END
 
@@ -46,9 +48,12 @@ class TemplateEngine(object):
                 if tag_type == None:
                     raise ("Unsupported Tag - cannot proceed:" + tag_match[0])
 
-            if tag_type == TemplateTagType.CONTEXT:
+            if tag_type == TemplateTagType.CONTEXT or tag_type == TemplateTagType.IF:
                 context_tag = TemplateTag(raw, tag_type, attributes, optional_keys)
-                tags.append(context_tag)
+                if len(context) == 0:
+                    tags.append(context_tag)
+                else:
+                    context[-1].children.append(context_tag)
                 context.append(context_tag)
             elif tag_type == TemplateTagType.END:
                 context[-1].end_tag = TemplateTag(raw, tag_type, attributes, optional_keys)
@@ -113,6 +118,16 @@ class TemplateEngine(object):
                             tag.children.append(TemplateTag("", TemplateTagType.ROWEND))
                     else:
                         self.get_tag_values(tag.children, new_context)
+            elif tag.type == TemplateTagType.IF:
+                path_value = tag.attributes.get("path", None)
+                if path_value:
+                    tag.render = self.traverse_dictionary(path_value, context)
+                else:
+                    tag.render = False
+                
+                if tag.render:
+                    self.get_tag_values(tag.children, context) # use the existing context; if tags do not generate a new context.
+                
             elif tag.type == TemplateTagType.END:
                 context.pop()
 

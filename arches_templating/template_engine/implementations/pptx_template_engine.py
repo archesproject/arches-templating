@@ -68,7 +68,7 @@ class PptxTemplateEngine(TemplateEngine):
         row = table.rows[row_index]
         table._tbl.remove(row._tr)
 
-    def add_row(table):
+    def add_row(table, index=-1):
         """
         Duplicates last row to keep formatting and resets it's cells text_frames
         (e.g. ``row = table.rows.add_row()``).
@@ -80,7 +80,10 @@ class PptxTemplateEngine(TemplateEngine):
             cell = _Cell(tc, new_row.tc_lst)
             cell.text = ''
 
-        table._tbl.append(new_row)
+        if index == -1:
+            index = len(table._tbl) % index
+
+        table._tbl.insert(index, new_row)
 
         return _Row(new_row, table)
 
@@ -88,12 +91,15 @@ class PptxTemplateEngine(TemplateEngine):
         for tag in tags:
             block = tag.optional_keys['container']
             if tag.type == TemplateTagType.CONTEXT:                    
-                
+                block.text = block.text.replace(tag.raw, "")
+                end_block = tag.end_tag.optional_keys['container']
+                end_block.text = end_block.text.replace(tag.end_tag.raw, "")
+
                 if tag.has_rows:
                     column = 0
                     # this is ugly, but way more efficient than the alternative
                     parent_table = tag.context_children_template[-1].optional_keys["parent"]
-                    PptxTemplateEngine.remove_row(parent_table, 3)
+                    
                     current_row = PptxTemplateEngine.add_row(parent_table)
 
 
@@ -113,7 +119,8 @@ class PptxTemplateEngine(TemplateEngine):
 
                     PptxTemplateEngine.remove_row(parent_table, 2)
                     if lead_matches_len > 1:
-                        parent_table.cell(0,0).text = self.regex.sub('', parent_table.cell(0,0).text)
+                        primary_cell = parent_table.cell(0,0)
+                        primary_cell.text = primary_cell.text.replace(tag.raw, primary_cell.text)
                     else:
                         PptxTemplateEngine.remove_row(parent_table, 0)
                     
@@ -121,12 +128,34 @@ class PptxTemplateEngine(TemplateEngine):
                     self.replace_tags(tag.children)
 
             elif tag.type == TemplateTagType.VALUE:
-                block.text = tag.value
+                block.text = block.text.replace(tag.raw, tag.value)
             elif tag.type == TemplateTagType.IMAGE:
                 block._parent.add_picture(BytesIO(b64decode(re.sub("data:image/jpeg;base64,", '', tag.value))), block.top, block.left, block.width, block.height)
                 PptxTemplateEngine.delete_element(block)
-
-    
+            elif tag.type == TemplateTagType.IF:
+                if tag.render:
+                    block.text = block.text.replace(tag.raw, "")
+                    end_block = tag.end_tag.optional_keys['container']
+                    end_block.text = end_block.text.replace(tag.end_tag.raw, "")
+                    self.replace_tags(tag.children)
+                else:
+                    all_elements = []
+                    found_if_start = False
+                    found_if_end = False
+                    for item in self.iter_block_items(block._parent):
+                        if item._element == block._element:
+                            found_if_start = True
+                        if item._element == tag.end_tag.optional_keys["docxBlock"]._element:
+                            found_if_end = True
+                            try:
+                                item.text = ""
+                            except AttributeError: # ok to skip if text is not found
+                                pass
+                        if found_if_start and not found_if_end:
+                            try:
+                                item.text = ""
+                            except AttributeError: # ok to skip if text is not found
+                                pass
 
     def create_file(self, tags:List[TemplateTag], template):
         bytestream = BytesIO()

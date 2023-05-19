@@ -100,7 +100,10 @@ class TemplateEngine(object):
         for tag in tags:
             if tag.type == TemplateTagType.VALUE:
                 path_value = tag.attributes.get("path", None)
-                tag.value = self.traverse_dictionary(path_value, context)
+                if path_value is not None:
+                    tag.value = self.traverse_dictionary(path_value, context)
+                else:
+                    tag.value = ""
             if tag.type == TemplateTagType.IMAGE:
                 path_value = tag.attributes.get("path", None)
                 if path_value:

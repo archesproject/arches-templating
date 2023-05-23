@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-version = '0.1.0'
+version = '0.1.1'
 
 setup(
     name="arches-templating",
@@ -10,6 +10,8 @@ setup(
     version=version,
     description="Arches templating provides an extensible templating engine for various file types",
     url="http://archesproject.org/",
+    long_description=open("README.md").read(),
+    long_description_content_type="text/markdown",
     author="Farallon Geographics, Inc",
     author_email="dev@fargeo.com",
     license="GNU AGPL3",

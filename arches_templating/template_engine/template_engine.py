@@ -1,9 +1,10 @@
+import base64
 import copy
 import re
 from typing import List, Tuple
 from arches_templating.template_engine.template_tag import TemplateTag
 from arches_templating.template_engine.template_tag_type import TemplateTagType
-
+import requests
 
 class TemplateEngine(object):
     def __init__(
@@ -34,6 +35,8 @@ class TemplateEngine(object):
                 tag_type = TemplateTagType.IMAGE
             elif tag_match[1] == "context":
                 tag_type = TemplateTagType.CONTEXT
+            elif tag_match[1] == "if":
+                tag_type = TemplateTagType.IF
             elif tag_match[1] == "end":
                 tag_type = TemplateTagType.END
 
@@ -46,9 +49,12 @@ class TemplateEngine(object):
                 if tag_type == None:
                     raise ("Unsupported Tag - cannot proceed:" + tag_match[0])
 
-            if tag_type == TemplateTagType.CONTEXT:
+            if tag_type == TemplateTagType.CONTEXT or tag_type == TemplateTagType.IF:
                 context_tag = TemplateTag(raw, tag_type, attributes, optional_keys)
-                tags.append(context_tag)
+                if len(context) == 0:
+                    tags.append(context_tag)
+                else:
+                    context[-1].children.append(context_tag)
                 context.append(context_tag)
             elif tag_type == TemplateTagType.END:
                 context[-1].end_tag = TemplateTag(raw, tag_type, attributes, optional_keys)
@@ -92,10 +98,20 @@ class TemplateEngine(object):
         extended_tags = []
 
         for tag in tags:
-            if tag.type == TemplateTagType.VALUE or tag.type == TemplateTagType.IMAGE:
+            if tag.type == TemplateTagType.VALUE:
+                path_value = tag.attributes.get("path", None)
+                if path_value is not None:
+                    tag.value = self.traverse_dictionary(path_value, context)
+                else:
+                    tag.value = ""
+            if tag.type == TemplateTagType.IMAGE:
                 path_value = tag.attributes.get("path", None)
                 if path_value:
-                    tag.value = self.traverse_dictionary(path_value, context)
+                    image_value = self.traverse_dictionary(path_value, context)
+                    if re.match("^http", image_value):
+                        tag.value = "data:image/jpeg;base64," + base64.b64encode(requests.get(image_value).content).decode('utf-8')
+                    else:
+                        tag.value = image_value
                 extended_tags.append(tag)
             elif tag.type == TemplateTagType.CONTEXT:
                 path_value = tag.attributes.get("path", None)
@@ -113,6 +129,20 @@ class TemplateEngine(object):
                             tag.children.append(TemplateTag("", TemplateTagType.ROWEND))
                     else:
                         self.get_tag_values(tag.children, new_context)
+            elif tag.type == TemplateTagType.IF:
+                path_value = tag.attributes.get("path", None)
+                inverse_value:str = tag.attributes.get("inverse", "")
+                inverse = True if inverse_value.lower() == "true" else False
+                if path_value:
+                    tag_value = self.traverse_dictionary(path_value, context)
+                else:
+                    tag_value = False
+                
+                tag.render = tag_value if inverse is False else not tag_value
+                
+                if tag.render:
+                    self.get_tag_values(tag.children, context) # use the existing context; if tags do not generate a new context.
+                
             elif tag.type == TemplateTagType.END:
                 context.pop()
 

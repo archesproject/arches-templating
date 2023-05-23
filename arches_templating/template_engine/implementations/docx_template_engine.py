@@ -11,6 +11,7 @@ from arches_templating.template_engine.template_tag import TemplateTag
 import docx
 from docx.oxml.ns import qn
 from docx.document import Document as _Document
+from docx.document import _Body
 from docx.oxml import OxmlElement
 from docx.oxml.text.paragraph import CT_P
 from docx.oxml.table import CT_Tbl
@@ -68,6 +69,9 @@ class DocxTemplateEngine(TemplateEngine):
             element_parent = parent_elm = parent._tc
         elif isinstance(parent, _Header):
             element_parent = parent_elm = parent._element
+        elif isinstance(parent, _Body):
+            parent_elm = parent._body
+            element_parent = parent
         else:
             raise ValueError("something's not right")
 
@@ -79,8 +83,13 @@ class DocxTemplateEngine(TemplateEngine):
 
     def delete_paragraph(paragraph):
         p = paragraph._element
-        p.getparent().remove(p)
-        p._p = p._element = None
+        paragraph_parent = p.getparent()
+        if paragraph_parent: 
+            paragraph_parent.remove(p)
+            p._p = p._element = None
+    
+    def delete_table(table):
+        table._element.getparent().remove(table._element)
 
     def remove_row(table, row):
         tbl = table._tbl
@@ -141,6 +150,25 @@ class DocxTemplateEngine(TemplateEngine):
                 run = block.add_run()
                 if tag.value:
                     run.add_picture(BytesIO(b64decode(re.sub("data:image/jpeg;base64,", "", tag.value))))
+            elif tag.type == TemplateTagType.IF:
+                if tag.render:
+                    DocxTemplateEngine.delete_paragraph(block)
+                    DocxTemplateEngine.delete_paragraph(tag.end_tag.optional_keys["docxBlock"])
+                    self.replace_tags(tag.children)
+                else:
+                    all_elements = []
+                    found_if_start = False
+                    found_if_end = False
+                    for item in self.iter_block_items(block._parent):
+                        if item._element == block._element:
+                            found_if_start = True
+                        if item._element == tag.end_tag.optional_keys["docxBlock"]._element:
+                            found_if_end = True
+                            DocxTemplateEngine.delete_paragraph(item)
+                        if found_if_start and not found_if_end:
+                            DocxTemplateEngine.delete_paragraph(item)
+                
+
 
     def create_file(self, tags: List[TemplateTag], template):
         bytestream = BytesIO()

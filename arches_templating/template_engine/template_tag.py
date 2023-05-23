@@ -15,3 +15,4 @@ class TemplateTag(object):
         self.optional_keys = optional_keys
         self.has_rows = False
         self.context_children_template = None
+        self.render = True

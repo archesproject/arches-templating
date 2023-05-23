@@ -36,11 +36,13 @@ We currently support five base tags.
 * image
 * end
 
-Each of these tags requires a "path" attribute and is prefixed by "arches:.  For example:
+Each of these tags requires a "path" attribute and is prefixed by "arches:".  For example:
 
 `<arches:value path="path/in/data/container">`
 
-The context tag will change the "context" of its child tags to whatever its path matches within the data container provided to the template engine.  
+An `end` tag is required for the `context` and `if` tags.
+
+The `context` tag will change the "context" of its child tags to whatever its path matches within the data container provided to the template engine.  
 
 Functionally, this means that
 
@@ -58,7 +60,19 @@ are functionally equivalent and referencing the same data within the data contai
 
 If the context is pointing to an array, this is currently the method being used to render table rows.  
 
-The if tag can be inverted by providing an "inverse" attribute set to true.
+Elements can be optionally rendered by an `if` tag.
+
+```
+<arches:if path="foo">
+Some optionally rendered content, depending on value at the "foo" path of your data container.
+<arches:end>
+```
+
+An `image` tag can render an image from a URL or (optionally) a base64 encoded image from the backend.
+`<arches:image path=“path_to_image_or_path_to_url”>`
+
+
+The `if` tag can be inverted by providing an "inverse" attribute set to true.
 
 `<arches:if inverse="true" path="foo">`
 

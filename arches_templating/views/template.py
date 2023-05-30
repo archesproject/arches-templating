@@ -55,8 +55,9 @@ class TemplateView(generic.View):
         engine = factory.create_engine(extension)
         with template_record.template.open('rb') as f:
             source_stream = BytesIO(f.read())
-        (bytestream, mime, title) = engine.document_replace(source_stream, json_data)
-
+        (bytestream, mime) = engine.document_replace(source_stream, json_data)
+        file_name = "{}.{}" 
+        file_name = file_name.format(json_data["filename"] if "filename" in json_data else "untitled", extension)
         bytestream.seek(0)
 
         if template is None:
@@ -64,5 +65,5 @@ class TemplateView(generic.View):
 
         response = HttpResponse(content=bytestream.read())
         response["Content-Type"] = mime
-        response["Content-Disposition"] = "attachment; filename={}".format(title)
+        response["Content-Disposition"] = "attachment; filename={}".format(file_name)
         return response

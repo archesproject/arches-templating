@@ -189,4 +189,4 @@ class PptxTemplateEngine(TemplateEngine):
         mime = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
         self.replace_tags(tags)
         self.presentation.save(bytestream)
-        return (bytestream, mime, "test.pptx")
+        return (bytestream, mime)

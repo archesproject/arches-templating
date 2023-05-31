@@ -175,4 +175,4 @@ class DocxTemplateEngine(TemplateEngine):
         mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         self.replace_tags(tags)
         self.doc.save(bytestream)
-        return (bytestream, mime, "test.docx")
+        return (bytestream, mime)

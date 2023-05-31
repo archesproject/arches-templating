@@ -154,4 +154,4 @@ class XlsxTemplateEngine(TemplateEngine):
         mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         self.replace_tags(tags)
         self.workbook.save(bytestream)
-        return (bytestream, mime, "test.xlsx")
+        return (bytestream, mime)

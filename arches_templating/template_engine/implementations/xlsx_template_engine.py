@@ -150,8 +150,9 @@ class XlsxTemplateEngine(TemplateEngine):
     
 
     def create_file(self, tags:List[TemplateTag], template):
+        incomplete = False
         bytestream = BytesIO()
         mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         self.replace_tags(tags)
         self.workbook.save(bytestream)
-        return (bytestream, mime)
+        return (bytestream, mime, incomplete)

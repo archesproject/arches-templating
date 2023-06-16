@@ -81,6 +81,7 @@ class TemplateEngine(object):
 
     def traverse_dictionary(self, path, dictionary):
         path_parts = path.split("/")
+        path_parts = [i for i in path_parts if i] # remove empty strings
         current_value = dictionary
 
         for part in path_parts:
@@ -94,20 +95,29 @@ class TemplateEngine(object):
                     current_value = None  # this is ok, allows us to continue writing to the template.
         return current_value
 
-    def get_tag_values(self, tags, context) -> List[TemplateTag]:
+    def get_tag_values(self, tags, context, root_context=None) -> List[TemplateTag]:
         extended_tags = []
+        current_root_context = context if root_context is None else root_context
 
         for tag in tags:
             if tag.type == TemplateTagType.VALUE:
                 path_value = tag.attributes.get("path", None)
                 if path_value is not None:
-                    tag.value = self.traverse_dictionary(path_value, context)
+                    if path_value.startswith("/"):
+                        # any path that starts with "/" will be tied to the root context.  We can be more explicit in tag attributes later if need be
+                        tag.value = self.traverse_dictionary(path_value, current_root_context)
+                    else: 
+                        tag.value = self.traverse_dictionary(path_value, context)
                 else:
                     tag.value = ""
             if tag.type == TemplateTagType.IMAGE:
                 path_value = tag.attributes.get("path", None)
-                if path_value:
-                    image_value = self.traverse_dictionary(path_value, context)
+                if path_value is not None:
+                    if path_value.startswith("/"):
+                        # any path that starts with "/" will be tied to the root context.  We can be more explicit in tag attributes later if need be
+                        image_value = self.traverse_dictionary(path_value, current_root_context)
+                    else: 
+                        image_value = self.traverse_dictionary(path_value, context)
                     if re.match("^http", image_value):
                         tag.value = "data:image/jpeg;base64," + base64.b64encode(requests.get(image_value).content).decode('utf-8')
                     else:
@@ -116,19 +126,24 @@ class TemplateEngine(object):
             elif tag.type == TemplateTagType.CONTEXT:
                 path_value = tag.attributes.get("path", None)
                 index_value = tag.attributes.get("index", None)
-                if path_value:
-                    new_context = self.traverse_dictionary(path_value, context)
+                if path_value is not None:
+                    if path_value.startswith("/"):
+                        # any path that starts with "/" will be tied to the root context.  We can be more explicit in tag attributes later if need be
+                        new_context = self.traverse_dictionary(path_value, current_root_context)
+                    else: 
+                        new_context = self.traverse_dictionary(path_value, context)
                     if isinstance(new_context, List) and index_value:
-                        self.get_tag_values(tag.children, new_context[int(index_value)])
+                        self.get_tag_values(tag.children, new_context[int(index_value)], current_root_context)
                     elif isinstance(new_context, List):
                         tag.has_rows = True
                         tag.context_children_template = tag.children
                         tag.children = []
+                        tag.context_length = len(new_context)
                         for item in new_context:
-                            tag.children.extend(self.get_tag_values(copy.deepcopy(tag.context_children_template), item))
+                            tag.children.extend(self.get_tag_values(copy.deepcopy(tag.context_children_template), item, current_root_context))
                             tag.children.append(TemplateTag("", TemplateTagType.ROWEND))
                     else:
-                        self.get_tag_values(tag.children, new_context)
+                        self.get_tag_values(tag.children, new_context, current_root_context)
             elif tag.type == TemplateTagType.IF:
                 path_value = tag.attributes.get("path", None)
                 inverse_value:str = tag.attributes.get("inverse", "")
@@ -141,7 +156,7 @@ class TemplateEngine(object):
                 tag.render = tag_value if inverse is False else not tag_value
                 
                 if tag.render:
-                    self.get_tag_values(tag.children, context) # use the existing context; if tags do not generate a new context.
+                    self.get_tag_values(tag.children, context, current_root_context) # use the existing context; if tags do not generate a new context.
                 
             elif tag.type == TemplateTagType.END:
                 context.pop()
@@ -156,4 +171,13 @@ class TemplateEngine(object):
         tags = self.extract_tags(template)
 
         expanded_tags = self.get_tag_values(tags, context)
-        return self.create_file(expanded_tags, template)
+
+        result_file_stream, mime_type, incomplete = self.create_file(expanded_tags, template)
+
+        # Allow for a reparsing of the file with "incomplete"
+        # That is, the possibility that tags will be generated/not completed after the first render.
+        while incomplete:
+            result_file_stream, mime_type, incomplete = self.document_replace(result_file_stream, context)
+
+        return result_file_stream, mime_type, False
+

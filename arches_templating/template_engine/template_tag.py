@@ -16,3 +16,4 @@ class TemplateTag(object):
         self.has_rows = False
         self.context_children_template = None
         self.render = True
+        self.context_length = None

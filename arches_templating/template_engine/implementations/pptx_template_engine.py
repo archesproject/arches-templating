@@ -185,8 +185,9 @@ class PptxTemplateEngine(TemplateEngine):
         return raw_tags 
 
     def create_file(self, tags:List[TemplateTag], template):
+        incomplete = False
         bytestream = BytesIO()
         mime = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
         self.replace_tags(tags)
         self.presentation.save(bytestream)
-        return (bytestream, mime)
+        return (bytestream, mime, incomplete)

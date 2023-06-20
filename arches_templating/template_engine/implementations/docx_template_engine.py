@@ -97,50 +97,91 @@ class DocxTemplateEngine(TemplateEngine):
         tbl.remove(tr)
 
     def replace_tags(self, tags: List[TemplateTag]):
+        incomplete = False
         for tag in tags:
             block = tag.optional_keys["docxBlock"]
             if tag.type == TemplateTagType.CONTEXT:
-                if tag.has_rows:
-                    column = 0
-                    # this is ugly, but way more efficient than the alternative
-                    parent_table = tag.context_children_template[-1].optional_keys["parent"]
-                    current_row = parent_table.add_row()
+                if tag.has_rows and tag.context_children_template:
+                    # render a table
+                    parent = tag.context_children_template[-1].optional_keys["parent"]
+                    if isinstance(parent, Table):
+                    
+                        column = 0
+                        # this is ugly, but way more efficient than the alternative
+                        
+                        current_row = parent.add_row()
 
-                    for child in tag.children:
-                        if child.type == TemplateTagType.ROWEND:
-                            column = -1
-                            current_row = parent_table.add_row()
-                        elif child.type == TemplateTagType.VALUE:
-                            # grab any borders from the original cell copy them to the new cell.
-                            template_block = tag.context_children_template[column].optional_keys["docxBlock"]
-                            borders = template_block._parent.get_or_add_tcPr().first_child_found_in("w:tcBorders")
+                        for child in tag.children:
+                            if child.type == TemplateTagType.ROWEND:
+                                column = -1
+                                current_row = parent.add_row()
+                            elif child.type == TemplateTagType.VALUE:
+                                # grab any borders from the original cell copy them to the new cell.
+                                template_block = tag.context_children_template[column].optional_keys["docxBlock"]
+                                borders = template_block._parent.get_or_add_tcPr().first_child_found_in("w:tcBorders")
 
-                            for edge in ("start", "top", "end", "bottom", "left", "right", "insideH", "insideV"):
-                                raw_border_tag = "w:{}".format(edge)
+                                for edge in ("start", "top", "end", "bottom", "left", "right", "insideH", "insideV"):
+                                    raw_border_tag = "w:{}".format(edge)
 
-                                # check for tag existnace, if none found, then create one
-                                element = borders.find(qn(raw_border_tag))
-                                cell_borders = current_row.cells[column]._tc.get_or_add_tcPr().first_child_found_in("w:tcBorders")
-                                if cell_borders is None:
-                                    cell_borders = OxmlElement("w:tcBorders")
-                                    current_row.cells[column]._tc.get_or_add_tcPr().append(cell_borders)
-                                if element is not None:
-                                    cell_borders.append(copy.deepcopy(element))
-                            # every cell gets created with (bad) default styling.
-                            DocxTemplateEngine.delete_paragraph(current_row.cells[column].paragraphs[0])
-                            # copies paragraph styling from the original template cells
-                            current_row.cells[column].add_paragraph(
-                                "" if child.value == None else child.value,
-                                copy.deepcopy(_Cell(template_block._parent, parent_table).paragraphs[0].style),
-                            )
-                        column += 1
+                                    # check for tag existnace, if none found, then create one
+                                    element = borders.find(qn(raw_border_tag))
+                                    cell_borders = current_row.cells[column]._tc.get_or_add_tcPr().first_child_found_in("w:tcBorders")
+                                    if cell_borders is None:
+                                        cell_borders = OxmlElement("w:tcBorders")
+                                        current_row.cells[column]._tc.get_or_add_tcPr().append(cell_borders)
+                                    if element is not None:
+                                        cell_borders.append(copy.deepcopy(element))
+                                # every cell gets created with (bad) default styling.
+                                DocxTemplateEngine.delete_paragraph(current_row.cells[column].paragraphs[0])
+                                # copies paragraph styling from the original template cells
+                                current_row.cells[column].add_paragraph(
+                                    "" if child.value == None else child.value,
+                                    copy.deepcopy(_Cell(template_block._parent, parent).paragraphs[0].style),
+                                )
+                            column += 1
 
-                    if tag.attributes["has_header"] == "true":
-                        DocxTemplateEngine.remove_row(parent_table, parent_table.rows[1])
+                        if tag.attributes["has_header"] == "true":
+                            DocxTemplateEngine.remove_row(parent, parent.rows[1])
+                        else:
+                            DocxTemplateEngine.remove_row(parent, parent.rows[0])
                     else:
-                        DocxTemplateEngine.remove_row(parent_table, parent_table.rows[0])
+                        incomplete = True
+                        all_blocks_in_context = []
+                        # get all blocks between context start and end
+                        for item in self.iterate_inner_block(block, tag):
+                            all_blocks_in_context.append(item)
+                        
+                        # for each child (row) copy the context section
+                        context_index = 0
+                        while context_index < tag.context_length:
+                            block_index = 0
+                            while block_index <= len(all_blocks_in_context) - 1:
+                                if block_index == 0:
+                                    new_index_attribute = "index=\"{}\" ".format(context_index)
+                                    match = re.findall(self.regex, all_blocks_in_context[block_index].text)
+                                    try:
+                                        tag_length = len(all_blocks_in_context[block_index].text)
+                                        attribute_length = len(match[0][2])
+    
+                                        insert_index = tag_length - attribute_length
+                                        new_tag_text = all_blocks_in_context[block_index].text[:insert_index] + new_index_attribute + all_blocks_in_context[block_index].text[insert_index:]
+
+                                    except IndexError:
+                                        # OK to fail, means there was an issue getting a tag match.  Bail/abort rather than scream.
+                                        
+                                        pass
+
+                                    tag.end_tag.optional_keys["docxBlock"].insert_paragraph_before(new_tag_text, all_blocks_in_context[block_index].style)
+                                else:
+                                    tag.end_tag.optional_keys["docxBlock"]._element.addprevious(copy.deepcopy(all_blocks_in_context[block_index]._element))
+                                    
+                                block_index += 1
+                            context_index += 1
+                        for original_block in all_blocks_in_context:
+                            DocxTemplateEngine.delete_paragraph(original_block)
                 else:
-                    self.replace_tags(tag.children)
+                    incomplete = self.replace_tags(tag.children)
+                    
                 DocxTemplateEngine.delete_paragraph(block)
                 DocxTemplateEngine.delete_paragraph(tag.end_tag.optional_keys["docxBlock"])
             elif tag.type == TemplateTagType.VALUE:
@@ -150,29 +191,34 @@ class DocxTemplateEngine(TemplateEngine):
                 run = block.add_run()
                 if tag.value:
                     run.add_picture(BytesIO(b64decode(re.sub("data:image/jpeg;base64,", "", tag.value))))
+            # do not use if blocks within tables (note as of 6/6/2023)
             elif tag.type == TemplateTagType.IF:
                 if tag.render:
                     DocxTemplateEngine.delete_paragraph(block)
                     DocxTemplateEngine.delete_paragraph(tag.end_tag.optional_keys["docxBlock"])
                     self.replace_tags(tag.children)
                 else:
-                    all_elements = []
-                    found_if_start = False
-                    found_if_end = False
-                    for item in self.iter_block_items(block._parent):
-                        if item._element == block._element:
-                            found_if_start = True
-                        if item._element == tag.end_tag.optional_keys["docxBlock"]._element:
-                            found_if_end = True
-                            DocxTemplateEngine.delete_paragraph(item)
-                        if found_if_start and not found_if_end:
-                            DocxTemplateEngine.delete_paragraph(item)
+                    for item in self.iterate_inner_block(block, tag):
+                        DocxTemplateEngine.delete_paragraph(item)
+        return incomplete
+
                 
+    def iterate_inner_block(self, block, tag):
+        found_if_start = False
+        found_if_end = False
+        for item in self.iter_block_items(block._parent):
+            if item._element == block._element:
+                found_if_start = True
+            if item._element == tag.end_tag.optional_keys["docxBlock"]._element:
+                found_if_end = True
+                yield item 
+            if found_if_start and not found_if_end:
+                yield item
 
 
     def create_file(self, tags: List[TemplateTag], template):
         bytestream = BytesIO()
         mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        self.replace_tags(tags)
+        incomplete = self.replace_tags(tags)
         self.doc.save(bytestream)
-        return (bytestream, mime)
+        return (bytestream, mime, incomplete)

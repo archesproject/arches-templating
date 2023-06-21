@@ -52,6 +52,13 @@ class TemplateView(generic.View):
         bytestream = BytesIO()
         extension = os.path.splitext(template)[1].replace(".", "")
         factory = TemplateEngineFactory()
+
+        # I don't love doing this, because it's a "hardcoded" dependency on Arches - but it's optional.
+        try:
+            json_data['internal_base_url'] = settings.ARCHES_NAMESPACE_FOR_DATA_EXPORT
+        except:
+            pass # no need for the setting to exist, but if it does, use it.
+
         engine = factory.create_engine(extension)
         with template_record.template.open('rb') as f:
             source_stream = BytesIO(f.read())

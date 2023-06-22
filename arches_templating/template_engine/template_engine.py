@@ -5,6 +5,7 @@ from typing import List, Tuple
 from arches_templating.template_engine.template_tag import TemplateTag
 from arches_templating.template_engine.template_tag_type import TemplateTagType
 import requests
+from urllib.parse import urlparse, urlunparse
 
 class TemplateEngine(object):
     def __init__(
@@ -119,6 +120,13 @@ class TemplateEngine(object):
                     else: 
                         image_value = self.traverse_dictionary(path_value, context)
                     if re.match("^http", image_value):
+                        if(re.search("\/temp_file\/", image_value)):
+                            parsed_url = urlparse(image_value)
+                            if 'internal_base_url' in root_context: # sometimes the internal base url differs from the externally exposed one.  Esp the case in docker networks
+                                internal_base_url = urlparse(root_context['internal_base_url'])
+                                parsed_url = parsed_url._replace(netloc=internal_base_url.netloc)
+                            image_value = urlunparse(parsed_url)
+
                         tag.value = "data:image/jpeg;base64," + base64.b64encode(requests.get(image_value).content).decode('utf-8')
                     else:
                         tag.value = image_value

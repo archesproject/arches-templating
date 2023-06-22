@@ -180,7 +180,8 @@ class DocxTemplateEngine(TemplateEngine):
                         for original_block in all_blocks_in_context:
                             DocxTemplateEngine.delete_paragraph(original_block)
                 else:
-                    incomplete = self.replace_tags(tag.children)
+                    replace_tags_result = self.replace_tags(tag.children)
+                    incomplete = incomplete or replace_tags_result
                     
                 DocxTemplateEngine.delete_paragraph(block)
                 DocxTemplateEngine.delete_paragraph(tag.end_tag.optional_keys["docxBlock"])

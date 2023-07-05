@@ -84,7 +84,7 @@ class DocxTemplateEngine(TemplateEngine):
     def delete_paragraph(paragraph):
         p = paragraph._element
         paragraph_parent = p.getparent()
-        if paragraph_parent: 
+        if paragraph_parent is not None: 
             paragraph_parent.remove(p)
             p._p = p._element = None
     

@@ -19,7 +19,8 @@ setup(
         'Django >= 3.2.18',
         'python-pptx >= 0.6.21',
         'python-docx >= 0.8.11',
-        'openpyxl >= 3.0.7'
+        'openpyxl >= 3.0.7',
+        'PyYAML >= 6.0'
     ],
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[

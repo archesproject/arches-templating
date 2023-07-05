@@ -1,6 +1,7 @@
 import glob
 import os
 import uuid
+import yaml
 from django.core.management.base import BaseCommand
 from django.core.files.storage import default_storage
 from django.core.files import File
@@ -22,57 +23,54 @@ class Command(BaseCommand):
         template_directory = os.path.dirname(source)
         template_id = None
         description = None
-        template_prefix = None
-        template_suffix = None
         template_name = None
         preview_file = None
         thumbnail_file = None
         saved_template_file = None
         saved_thumbnail_file = None
         saved_preview_file = None
-        template_name_split = template_file_name.split('_')
+        with open(source, 'rb') as source_file:
+            config = yaml.safe_load(source_file)
+        
         try:
-            template_prefix = template_name_split[0]
-            with open(source, 'rb') as source_file:
-                saved_template_file = default_storage.save(template_file_name, File(source_file))
-
-        except IndexError:
-            raise Exception("Template name formatted incorrectly.  Must be in the form of uuid_template_[name].ext - where name is optional.")
+            with open(os.path.join(template_directory, config['file']), 'rb') as template_file:
+                saved_template_file = default_storage.save(template_file_name, File(template_file))
+        except KeyError as e:
+            raise Exception("Template file wasn't provided by yaml config", e)
 
         try:
-            template_suffix = template_name_split[2]
-            template_suffix = template_suffix.split('.')[0]
-            template_name = template_suffix.replace('-', ' ')
-        except IndexError:
+            template_name = config['name']
+        except KeyError:
             pass # ok, name is optional
 
         try:
-            uuid_obj = uuid.UUID(template_prefix)
+            uuid_obj = uuid.UUID(config['id'])
+            template_id = str(uuid_obj)
+        except KeyError: # optional, but if not provided we will always create a new template
+            uuid_obj = uuid.uuid4()
             template_id = str(uuid_obj)
         except ValueError:
-            pass
+            raise Exception("ID in config file must be a valid uuid", e)
 
         try:
-            print(os.path.join(template_directory, template_id + "_preview.*"))
-            preview_file = glob.glob(os.path.join(template_directory, "{}_preview.*".format(template_id)))[0]
+            preview_file = glob.glob(os.path.join(template_directory, config['preview']))[0]
             with open(preview_file, 'rb') as source_file:
                 saved_preview_file = default_storage.save(os.path.basename(preview_file), File(source_file))
-        except (IndexError, FileNotFoundError):
+        except (KeyError, FileNotFoundError):
             pass # preview file need not exist
 
         try:
-            thumbnail_file = glob.glob(os.path.join(template_directory, "{}_thumbnail.*".format(template_id)))[0]
+            thumbnail_file = glob.glob(os.path.join(template_directory, config['thumbnail']))[0]
             
             with open(thumbnail_file, 'rb') as source_file:
                 saved_thumbnail_file = default_storage.save(os.path.basename(thumbnail_file), File(source_file))
-        except (IndexError, FileNotFoundError):
-            pass # preview file need not exist
+        except (KeyError, FileNotFoundError):
+            pass # thumbnail file need not exist
         
         try:
-            with open(os.path.join(template_directory, "{}_description.txt".format(template_id)), 'r') as description_file:
-                description = description_file.read()
-        except FileNotFoundError:
-            pass # description file need not exist  
+            description = config['description']
+        except KeyError:
+            pass # description need not exist  
         
         if template_id:
             template, created = ArchesTemplate.objects.update_or_create(

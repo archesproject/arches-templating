@@ -19,7 +19,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         source = options["source"]
-        template_file_name = os.path.basename(source)
         template_directory = os.path.dirname(source)
         template_id = None
         description = None
@@ -31,6 +30,7 @@ class Command(BaseCommand):
         saved_preview_file = None
         with open(source, 'rb') as source_file:
             config = yaml.safe_load(source_file)
+        template_file_name = os.path.basename(config['file'])
         
         try:
             with open(os.path.join(template_directory, config['file']), 'rb') as template_file:

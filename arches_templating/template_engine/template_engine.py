@@ -2,6 +2,8 @@ import base64
 import copy
 import re
 from typing import List, Tuple
+from urllib.error import HTTPError
+from requests.exceptions import ConnectionError
 from arches_templating.template_engine.template_tag import TemplateTag
 from arches_templating.template_engine.template_tag_type import TemplateTagType
 import requests
@@ -119,17 +121,22 @@ class TemplateEngine(object):
                         image_value = self.traverse_dictionary(path_value, current_root_context)
                     else: 
                         image_value = self.traverse_dictionary(path_value, context)
-                    if re.match("^http", image_value):
-                        if(re.search("\/temp_file\/", image_value)):
-                            parsed_url = urlparse(image_value)
-                            if 'internal_base_url' in root_context: # sometimes the internal base url differs from the externally exposed one.  Esp the case in docker networks
-                                internal_base_url = urlparse(root_context['internal_base_url'])
-                                parsed_url = parsed_url._replace(netloc=internal_base_url.netloc)
-                            image_value = urlunparse(parsed_url)
+                    try:
+                        if re.match("^http", image_value):
+                            if(re.search("\/temp_file\/", image_value)):
+                                parsed_url = urlparse(image_value)
+                                if 'internal_base_url' in root_context: # sometimes the internal base url differs from the externally exposed one.  Esp the case in docker networks
+                                    internal_base_url = urlparse(root_context['internal_base_url'])
+                                    parsed_url = parsed_url._replace(netloc=internal_base_url.netloc)
+                                image_value = urlunparse(parsed_url)
 
-                        tag.value = "data:image/jpeg;base64," + base64.b64encode(requests.get(image_value).content).decode('utf-8')
-                    else:
-                        tag.value = image_value
+                            tag.value = "data:image/jpeg;base64," + base64.b64encode(requests.get(image_value).content).decode('utf-8')
+                        else:
+                            tag.value = image_value
+                    except TypeError as e: #when image_value is null, the render failed
+                        raise Exception('Could not get a URL for a requested image, image_value was not a string', e) from e
+                    except (HTTPError, ConnectionError) as e:
+                        raise Exception('An error occurred retrieving an image for inclusion in the report.  Check your PUBLIC_SERVER_ADDRESS setting.', e) from e
                 extended_tags.append(tag)
             elif tag.type == TemplateTagType.CONTEXT:
                 path_value = tag.attributes.get("path", None)

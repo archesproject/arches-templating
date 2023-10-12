@@ -55,7 +55,7 @@ class TemplateView(generic.View):
 
         # I don't love doing this, because it's a "hardcoded" dependency on Arches - but it's optional.
         try:
-            json_data['internal_base_url'] = settings.ARCHES_NAMESPACE_FOR_DATA_EXPORT
+            json_data['internal_base_url'] = settings.PUBLIC_SERVER_ADDRESS
         except:
             pass # no need for the setting to exist, but if it does, use it.
 

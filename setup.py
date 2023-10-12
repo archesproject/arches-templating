@@ -18,7 +18,7 @@ setup(
     install_requires=[
         'Django >= 3.2.18',
         'python-pptx >= 0.6.21',
-        'python-docx >= 0.8.11',
+        'python-docx >= 0.8.11, != 1.0.0',
         'openpyxl >= 3.0.7',
         'PyYAML >= 6.0'
     ],

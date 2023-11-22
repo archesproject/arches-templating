@@ -172,7 +172,6 @@ class DocxTemplateEngine(TemplateEngine):
 
                                     except IndexError:
                                         # OK to fail, means there was an issue getting a tag match.  Bail/abort rather than scream.
-
                                         pass
 
                                     tag.end_tag.optional_keys["docxBlock"].insert_paragraph_before(

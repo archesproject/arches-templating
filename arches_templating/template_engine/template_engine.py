@@ -9,6 +9,7 @@ from arches_templating.template_engine.template_tag_type import TemplateTagType
 import requests
 from urllib.parse import urlparse, urlunparse
 
+
 class TemplateEngine(object):
     def __init__(
         self,
@@ -84,7 +85,7 @@ class TemplateEngine(object):
 
     def traverse_dictionary(self, path, dictionary):
         path_parts = path.split("/")
-        path_parts = [i for i in path_parts if i] # remove empty strings
+        path_parts = [i for i in path_parts if i]  # remove empty strings
         current_value = dictionary
 
         for part in path_parts:
@@ -109,7 +110,7 @@ class TemplateEngine(object):
                     if path_value.startswith("/"):
                         # any path that starts with "/" will be tied to the root context.  We can be more explicit in tag attributes later if need be
                         tag.value = self.traverse_dictionary(path_value, current_root_context)
-                    else: 
+                    else:
                         tag.value = self.traverse_dictionary(path_value, context)
                 else:
                     tag.value = ""
@@ -119,24 +120,29 @@ class TemplateEngine(object):
                     if path_value.startswith("/"):
                         # any path that starts with "/" will be tied to the root context.  We can be more explicit in tag attributes later if need be
                         image_value = self.traverse_dictionary(path_value, current_root_context)
-                    else: 
+                    else:
                         image_value = self.traverse_dictionary(path_value, context)
                     try:
-                        if re.match("^http", image_value):
-                            if(re.search("\/temp_file\/", image_value)):
+                        if re.match(r"^http", image_value):
+                            if re.search(r"/temp_file/", image_value):
                                 parsed_url = urlparse(image_value)
-                                if 'internal_base_url' in root_context: # sometimes the internal base url differs from the externally exposed one.  Esp the case in docker networks
-                                    internal_base_url = urlparse(root_context['internal_base_url'])
+                                if (
+                                    "internal_base_url" in root_context
+                                ):  # sometimes the internal base url differs from the externally exposed one.  Esp the case in docker networks
+                                    internal_base_url = urlparse(root_context["internal_base_url"])
                                     parsed_url = parsed_url._replace(netloc=internal_base_url.netloc)
                                 image_value = urlunparse(parsed_url)
 
-                            tag.value = "data:image/jpeg;base64," + base64.b64encode(requests.get(image_value).content).decode('utf-8')
+                            tag.value = "data:image/jpeg;base64," + base64.b64encode(requests.get(image_value).content).decode("utf-8")
                         else:
                             tag.value = image_value
-                    except TypeError as e: #when image_value is null, the render failed
-                        raise Exception('Could not get a URL for a requested image, image_value was not a string', e) from e
+                    except TypeError as e:  # when image_value is null, the render failed
+                        raise Exception("Could not get a URL for a requested image, image_value was not a string", e) from e
                     except (HTTPError, ConnectionError) as e:
-                        raise Exception('An error occurred retrieving an image for inclusion in the report.  Check your PUBLIC_SERVER_ADDRESS setting.', e) from e
+                        raise Exception(
+                            "An error occurred retrieving an image for inclusion in the report.  Check your PUBLIC_SERVER_ADDRESS setting.",
+                            e,
+                        ) from e
                 extended_tags.append(tag)
             elif tag.type == TemplateTagType.CONTEXT:
                 path_value = tag.attributes.get("path", None)
@@ -145,7 +151,7 @@ class TemplateEngine(object):
                     if path_value.startswith("/"):
                         # any path that starts with "/" will be tied to the root context.  We can be more explicit in tag attributes later if need be
                         new_context = self.traverse_dictionary(path_value, current_root_context)
-                    else: 
+                    else:
                         new_context = self.traverse_dictionary(path_value, context)
                     if isinstance(new_context, List) and index_value:
                         self.get_tag_values(tag.children, new_context[int(index_value)], current_root_context)
@@ -155,24 +161,28 @@ class TemplateEngine(object):
                         tag.children = []
                         tag.context_length = len(new_context)
                         for item in new_context:
-                            tag.children.extend(self.get_tag_values(copy.deepcopy(tag.context_children_template), item, current_root_context))
+                            tag.children.extend(
+                                self.get_tag_values(copy.deepcopy(tag.context_children_template), item, current_root_context)
+                            )
                             tag.children.append(TemplateTag("", TemplateTagType.ROWEND))
                     else:
                         self.get_tag_values(tag.children, new_context, current_root_context)
             elif tag.type == TemplateTagType.IF:
                 path_value = tag.attributes.get("path", None)
-                inverse_value:str = tag.attributes.get("inverse", "")
+                inverse_value: str = tag.attributes.get("inverse", "")
                 inverse = True if inverse_value.lower() == "true" else False
                 if path_value:
                     tag_value = self.traverse_dictionary(path_value, context)
                 else:
                     tag_value = False
-                
+
                 tag.render = tag_value if inverse is False else not tag_value
-                
+
                 if tag.render:
-                    self.get_tag_values(tag.children, context, current_root_context) # use the existing context; if tags do not generate a new context.
-                
+                    self.get_tag_values(
+                        tag.children, context, current_root_context
+                    )  # use the existing context; if tags do not generate a new context.
+
             elif tag.type == TemplateTagType.END:
                 context.pop()
 
@@ -195,4 +205,3 @@ class TemplateEngine(object):
             result_file_stream, mime_type, incomplete = self.document_replace(result_file_stream, context)
 
         return result_file_stream, mime_type, False
-

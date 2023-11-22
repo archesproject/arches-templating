@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "arches-templating"
+readme = "README.md"
+authors = [
+    {name = "Farallon Geographics, Inc", email = "dev@fargeo.com"}
+]
+license = {text = "GNU AGPL3"}
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Information Technology",
+    "Topic :: Software Development :: Build Tools",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Framework :: Django :: 1.11",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "Django >= 3.2.18",
+    "python-pptx >= 0.6.21",
+    "python-docx >= 0.8.11",
+    "openpyxl >= 3.0.7",
+    "PyYAML >= 6.0"
+]
+version = "0.1.2"
+
+[tool.setuptools]
+packages = ["arches_templating"]
+
+[tool.black]
+line-length = 140
+target-version = ['py310']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''

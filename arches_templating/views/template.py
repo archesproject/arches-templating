@@ -1,4 +1,3 @@
-
 import os
 import logging
 import json
@@ -14,8 +13,8 @@ from arches_templating.models import ArchesTemplate
 from arches_templating.template_engine.template_engine_factory import TemplateEngineFactory
 from django.views.decorators.csrf import csrf_exempt
 
-class TemplateView(generic.View):
 
+class TemplateView(generic.View):
     logger = logging.getLogger(__name__)
 
     def get(request):
@@ -23,31 +22,30 @@ class TemplateView(generic.View):
         response = []
         for template in all_templates:
             template_object = {}
-            template_object['templateid'] = template.templateid
-            template_object['name'] = template.name
-            template_object['description'] = template.description
-            template_object['template'] = {}
-            template_object['template']['url'] = template.template.url
-            template_object['template']['name'] = template.template.name
+            template_object["templateid"] = template.templateid
+            template_object["name"] = template.name
+            template_object["description"] = template.description
+            template_object["template"] = {}
+            template_object["template"]["url"] = template.template.url
+            template_object["template"]["name"] = template.template.name
             if template.preview:
-                template_object['preview'] = {}
-                template_object['preview']['url'] = template.preview.url
-                template_object['preview']['name'] = template.preview.url
+                template_object["preview"] = {}
+                template_object["preview"]["url"] = template.preview.url
+                template_object["preview"]["name"] = template.preview.url
             if template.thumbnail:
-                template_object['thumbnail'] = {}
-                template_object['thumbnail']['url'] = template.thumbnail.url
-                template_object['thumbnail']['name'] = template.thumbnail.name
+                template_object["thumbnail"] = {}
+                template_object["thumbnail"]["url"] = template.thumbnail.url
+                template_object["thumbnail"]["name"] = template.thumbnail.name
             response.append(template_object)
         return JSONResponse(response)
-    
+
     @csrf_exempt
     def post(self, request, templateid):
         json_data = json.loads(request.body)
-        #template_id = json_data["templateId"] if "templateId" in json_data else None
+        # template_id = json_data["templateId"] if "templateId" in json_data else None
         template_record = ArchesTemplate.objects.get(pk=templateid)
         template = template_record.template.name
-        #template = settings.AFS_CUSTOM_REPORTS[template_id] if template_id in settings.AFS_CUSTOM_REPORTS else None
-
+        # template = settings.AFS_CUSTOM_REPORTS[template_id] if template_id in settings.AFS_CUSTOM_REPORTS else None
 
         bytestream = BytesIO()
         extension = os.path.splitext(template)[1].replace(".", "")
@@ -55,15 +53,15 @@ class TemplateView(generic.View):
 
         # I don't love doing this, because it's a "hardcoded" dependency on Arches - but it's optional.
         try:
-            json_data['internal_base_url'] = settings.PUBLIC_SERVER_ADDRESS
+            json_data["internal_base_url"] = settings.PUBLIC_SERVER_ADDRESS
         except:
-            pass # no need for the setting to exist, but if it does, use it.
+            pass  # no need for the setting to exist, but if it does, use it.
 
         engine = factory.create_engine(extension)
-        with template_record.template.open('rb') as f:
+        with template_record.template.open("rb") as f:
             source_stream = BytesIO(f.read())
         (bytestream, mime, incomplete) = engine.document_replace(source_stream, json_data)
-        file_name = "{}.{}" 
+        file_name = "{}.{}"
         file_name = file_name.format(json_data["filename"] if "filename" in json_data else "untitled", extension)
         bytestream.seek(0)
 

@@ -1,5 +1,5 @@
-
 from enum import Enum
+
 
 class TemplateTagType(Enum):
     VALUE = 1

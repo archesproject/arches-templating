@@ -1,6 +1,7 @@
 import uuid
 from django.db import models
 
+
 class ArchesTemplate(models.Model):
     templateid = models.UUIDField(primary_key=True, unique=True)
     name = models.TextField(blank=False, null=False)

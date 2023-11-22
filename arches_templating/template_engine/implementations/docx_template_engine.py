@@ -19,7 +19,8 @@ from docx.table import _Cell, Table
 from docx.text.paragraph import Paragraph
 from docx.section import _Header
 
-@TemplateEngineFactory.register('docx')
+
+@TemplateEngineFactory.register("docx")
 class DocxTemplateEngine(TemplateEngine):
     def extract_regex_matches(self, template) -> List[Tuple]:
         self.doc = docx.Document(template)
@@ -84,10 +85,10 @@ class DocxTemplateEngine(TemplateEngine):
     def delete_paragraph(paragraph):
         p = paragraph._element
         paragraph_parent = p.getparent()
-        if paragraph_parent is not None: 
+        if paragraph_parent is not None:
             paragraph_parent.remove(p)
             p._p = p._element = None
-    
+
     def delete_table(table):
         table._element.getparent().remove(table._element)
 
@@ -105,10 +106,9 @@ class DocxTemplateEngine(TemplateEngine):
                     # render a table
                     parent = tag.context_children_template[-1].optional_keys["parent"]
                     if isinstance(parent, Table):
-                    
                         column = 0
                         # this is ugly, but way more efficient than the alternative
-                        
+
                         current_row = parent.add_row()
 
                         for child in tag.children:
@@ -150,31 +150,39 @@ class DocxTemplateEngine(TemplateEngine):
                         # get all blocks between context start and end
                         for item in self.iterate_inner_block(block, tag):
                             all_blocks_in_context.append(item)
-                        
+
                         # for each child (row) copy the context section
                         context_index = 0
                         while context_index < tag.context_length:
                             block_index = 0
                             while block_index <= len(all_blocks_in_context) - 1:
                                 if block_index == 0:
-                                    new_index_attribute = "index=\"{}\" ".format(context_index)
+                                    new_index_attribute = 'index="{}" '.format(context_index)
                                     match = re.findall(self.regex, all_blocks_in_context[block_index].text)
                                     try:
                                         tag_length = len(all_blocks_in_context[block_index].text)
                                         attribute_length = len(match[0][2])
-    
+
                                         insert_index = tag_length - attribute_length
-                                        new_tag_text = all_blocks_in_context[block_index].text[:insert_index] + new_index_attribute + all_blocks_in_context[block_index].text[insert_index:]
+                                        new_tag_text = (
+                                            all_blocks_in_context[block_index].text[:insert_index]
+                                            + new_index_attribute
+                                            + all_blocks_in_context[block_index].text[insert_index:]
+                                        )
 
                                     except IndexError:
                                         # OK to fail, means there was an issue getting a tag match.  Bail/abort rather than scream.
-                                        
+
                                         pass
 
-                                    tag.end_tag.optional_keys["docxBlock"].insert_paragraph_before(new_tag_text, all_blocks_in_context[block_index].style)
+                                    tag.end_tag.optional_keys["docxBlock"].insert_paragraph_before(
+                                        new_tag_text, all_blocks_in_context[block_index].style
+                                    )
                                 else:
-                                    tag.end_tag.optional_keys["docxBlock"]._element.addprevious(copy.deepcopy(all_blocks_in_context[block_index]._element))
-                                    
+                                    tag.end_tag.optional_keys["docxBlock"]._element.addprevious(
+                                        copy.deepcopy(all_blocks_in_context[block_index]._element)
+                                    )
+
                                 block_index += 1
                             context_index += 1
                         for original_block in all_blocks_in_context:
@@ -182,7 +190,7 @@ class DocxTemplateEngine(TemplateEngine):
                 else:
                     replace_tags_result = self.replace_tags(tag.children)
                     incomplete = incomplete or replace_tags_result
-                    
+
                 DocxTemplateEngine.delete_paragraph(block)
                 DocxTemplateEngine.delete_paragraph(tag.end_tag.optional_keys["docxBlock"])
             elif tag.type == TemplateTagType.VALUE:
@@ -203,7 +211,6 @@ class DocxTemplateEngine(TemplateEngine):
                         DocxTemplateEngine.delete_paragraph(item)
         return incomplete
 
-                
     def iterate_inner_block(self, block, tag):
         found_if_start = False
         found_if_end = False
@@ -212,10 +219,9 @@ class DocxTemplateEngine(TemplateEngine):
                 found_if_start = True
             if item._element == tag.end_tag.optional_keys["docxBlock"]._element:
                 found_if_end = True
-                yield item 
+                yield item
             if found_if_start and not found_if_end:
                 yield item
-
 
     def create_file(self, tags: List[TemplateTag], template):
         bytestream = BytesIO()

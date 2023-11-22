@@ -28,7 +28,7 @@ dependencies = [
     "openpyxl >= 3.0.7",
     "PyYAML >= 6.0"
 ]
-version = "0.1.1"
+version = "0.1.2"
 
 [tool.setuptools]
 packages = ["arches_templating"]

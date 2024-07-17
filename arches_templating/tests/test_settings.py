@@ -21,6 +21,25 @@ INSTALLED_APPS = [
     "arches_templating",
 ]
 
+
+DATABASES = {
+    "default": {
+        "ATOMIC_REQUESTS": False,
+        "AUTOCOMMIT": True,
+        "CONN_MAX_AGE": 0,
+        "ENGINE": "django.contrib.gis.db.backends.postgis",
+        "HOST": "localhost",
+        "NAME": "arches_templating",
+        "OPTIONS": {},
+        "PASSWORD": "postgis",
+        "PORT": "5432",
+        "POSTGIS_TEMPLATE": "template_postgis",
+        "TEST": {"CHARSET": None, "COLLATION": None, "MIRROR": None, "NAME": None},
+        "TIME_ZONE": None,
+        "USER": "postgres",
+    }
+}
+
 ROOT_URLCONF = "arches_templating.urls"
 
 TEST_RUNNER = "arches_templating.tests.base_test.ArchesTestRunner"

@@ -64,7 +64,7 @@ runs:
 
     - name: Check for missing migrations
       run: |
-        python manage.py makemigrations --check --settings="arches_templating.tests.test_settings"
+        python manage.py makemigrations arches_templating --check --settings="arches_templating.tests.test_settings"
       shell: bash
 
     - name: Ensure previous Python coverage data is erased

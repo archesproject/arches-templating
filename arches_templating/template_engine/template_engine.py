@@ -134,7 +134,7 @@ class TemplateEngine(object):
                         image_value = self.traverse_dictionary(path_value, context)
                     try:
                         if re.match("^http", image_value):
-                            if re.search("\/temp_file\/", image_value):
+                            if re.search(r"\/temp_file\/", image_value):
                                 parsed_url = urlparse(image_value)
                                 if (
                                     "internal_base_url" in root_context

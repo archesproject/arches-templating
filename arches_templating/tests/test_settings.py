@@ -1,5 +1,7 @@
-from arches.settings import *
 import os
+
+import arches
+from arches.settings import *
 
 PACKAGE_NAME = "arches_templating"
 APP_NAME = "arches_templating"
@@ -21,7 +23,21 @@ INSTALLED_APPS = [
 
 ROOT_URLCONF = "arches_templating.urls"
 
-TEST_RUNNER = "tests.base_test.ArchesTestRunner"
+TEST_RUNNER = "arches_templating.tests.base_test.ArchesTestRunner"
 SILENCED_SYSTEM_CHECKS.append(
     "arches.W001"
 )  # Cache backend does not support rate-limiting
+
+
+DOCKER = False
+
+try:
+    from arches.settings_local import *
+except ImportError:
+    pass
+
+if DOCKER:
+    try:
+        from arches.settings_docker import *
+    except ImportError:
+        pass

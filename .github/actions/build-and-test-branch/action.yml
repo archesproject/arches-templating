@@ -64,7 +64,7 @@ runs:
 
     - name: Check for missing migrations
       run: |
-        python manage.py makemigrations --check
+        python manage.py makemigrations --check --settings="arches_templating.tests.test_settings"
       shell: bash
 
     - name: Ensure previous Python coverage data is erased
@@ -74,7 +74,7 @@ runs:
 
     - name: Run Python unit tests
       run: |
-        python -W default::DeprecationWarning -m coverage run manage.py test tests --settings="tests.test_settings"
+        python -W default::DeprecationWarning -m coverage run manage.py test tests --settings="arches_templating.tests.test_settings"
       shell: bash
 
     - name: Generate Python report coverage

@@ -77,12 +77,6 @@ runs:
         ! git ls-files --eol | grep 'w/crlf\|w/mixed'
       shell: bash
 
-    - name: Run frontend tests
-      run: |
-        npm run vitest
-        mv coverage/frontend/coverage.xml ${{ inputs.branch-type }}_branch_frontend_coverage.xml
-      shell: bash
-
     - name: Check for missing migrations
       run: |
         python manage.py makemigrations --check

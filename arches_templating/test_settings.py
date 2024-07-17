@@ -22,4 +22,6 @@ INSTALLED_APPS = [
 ROOT_URLCONF = "arches_templating.urls"
 
 TEST_RUNNER = "tests.base_test.ArchesTestRunner"
-SILENCED_SYSTEM_CHECKS.append("arches.W001")  # Cache backend does not support rate-limiting
+SILENCED_SYSTEM_CHECKS.append(
+    "arches.W001"
+)  # Cache backend does not support rate-limiting

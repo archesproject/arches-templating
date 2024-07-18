@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "arches_templating"
+readme = "README.md"
+authors = [
+    {name = "Farallon Geographics, Inc", email = "dev@fargeo.com"}
+]
+license = {text = "GNU AGPL3"}
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Framework :: Django",
+    "Framework :: Django :: 4.2",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "arches>=7.6.0a8,<8.0.0",
+    "python-pptx >= 0.6.21",
+    "python-docx >= 0.8.11, != 1.0.0",
+    "openpyxl >= 3.0.7",
+    "PyYAML >= 6.0",
+]
+version = "0.2.0"
+
+[project.optional-dependencies]
+dev = [
+    "coverage",
+    "pre-commit",
+    "black==24.4.2",
+]
+
+[project.urls]
+Homepage = "https://archesproject.org/"
+Repository = "https://github.com/archesproject/arches-templating.git"
+Issues = "https://github.com/archesproject/arches-templating/issues"
+
+[tool.black]
+target-version = ["py310"]
+
+[tool.setuptools]
+packages = ["arches_templating"]

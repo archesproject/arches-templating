@@ -1,6 +1,5 @@
 import os
 
-import arches
 from arches.settings import *
 
 PACKAGE_NAME = "arches_templating"
@@ -46,6 +45,12 @@ TEST_RUNNER = "arches_templating.tests.base_test.ArchesTestRunner"
 SILENCED_SYSTEM_CHECKS.append(
     "arches.W001"
 )  # Cache backend does not support rate-limiting
+
+
+ELASTICSEARCH_PREFIX = "test"
+ELASTICSEARCH_HOSTS = [
+    {"scheme": "http", "host": "localhost", "port": ELASTICSEARCH_HTTP_PORT}
+]
 
 
 DOCKER = False

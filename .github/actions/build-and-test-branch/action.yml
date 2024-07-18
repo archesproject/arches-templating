@@ -74,7 +74,7 @@ runs:
 
     - name: Run Python unit tests
       run: |
-        python -W default::DeprecationWarning -m coverage run manage.py test tests --settings="arches_templating.tests.test_settings"
+        python -W default::DeprecationWarning -m coverage run manage.py test arches_templating.tests --settings="arches_templating.tests.test_settings"
       shell: bash
 
     - name: Generate Python report coverage
